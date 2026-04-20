@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 
 import BarraNavegacion from './componentes/BarraNavegacion';
@@ -7,14 +7,47 @@ import Footer from './componentes/Footer';
 import ChatBot from './componentes/ChatBot';
 
 import PaginaInicio from './paginas/PaginaInicio';
-import PaginaCarrito from './paginas/PaginaCarrito';
-import PaginaLogin from './paginas/PaginaLogin';
-import PoliticaPrivacidad from './paginas/PoliticaPrivacidad';
-import PoliticaDevoluciones from './paginas/PoliticaDevoluciones';
-import TerminosServicio from './paginas/TerminosServicio';
 
 import { obtenerProductos } from './servicios/servicioProducto';
 import resolverImagen from './utils/imagenesProductos';
+
+// Code splitting: estas páginas se cargan solo cuando se visitan
+const PaginaCarrito = lazy(() => import('./paginas/PaginaCarrito'));
+const PaginaLogin = lazy(() => import('./paginas/PaginaLogin'));
+const PoliticaPrivacidad = lazy(() => import('./paginas/PoliticaPrivacidad'));
+const PoliticaDevoluciones = lazy(() => import('./paginas/PoliticaDevoluciones'));
+const TerminosServicio = lazy(() => import('./paginas/TerminosServicio'));
+
+const CACHE_KEY = 'castrostore_productos_v1';
+const CACHE_TTL_MS = 1000 * 60 * 60; // 1 hora
+
+function leerCache() {
+  try {
+    const raw = localStorage.getItem(CACHE_KEY);
+    if (!raw) return null;
+    const { productos, timestamp } = JSON.parse(raw);
+    if (!productos || !timestamp) return null;
+    return { productos, expirado: Date.now() - timestamp > CACHE_TTL_MS };
+  } catch {
+    return null;
+  }
+}
+
+function guardarCache(productos) {
+  try {
+    localStorage.setItem(CACHE_KEY, JSON.stringify({ productos, timestamp: Date.now() }));
+  } catch {
+    // Ignore storage errors (quota, private mode, etc.)
+  }
+}
+
+function mapearConImagen(productos) {
+  return productos.map((p) => ({ ...p, imagen: resolverImagen(p.imagen) }));
+}
+
+function quitarImagen(productos) {
+  return productos.map(({ imagen, ...resto }) => resto);
+}
 
 function ReloadRedirect() {
   const navigate = useNavigate();
@@ -29,7 +62,7 @@ function ReloadRedirect() {
     if (isReload && location.pathname !== '/') {
       navigate('/', { replace: true });
     }
-  }, []); // Solo al montar: redirige a inicio si la página se recargó
+  }, []);
 
   return null;
 }
@@ -60,21 +93,32 @@ function App() {
   }, []);
 
   useEffect(() => {
-    const cargarProductos = async () => {
+    // Estrategia stale-while-revalidate:
+    // 1. Si hay cache, lo mostramos inmediatamente (instantáneo)
+    // 2. En paralelo, pedimos datos frescos al backend
+    // 3. Cuando lleguen, actualizamos la vista y el cache
+    const cache = leerCache();
+    if (cache) {
+      setProductos(mapearConImagen(cache.productos));
+      setCargandoProductos(false);
+    }
+
+    const cargarDesdeBackend = async () => {
       try {
         const respuesta = await obtenerProductos();
-        const productosConImagen = respuesta.datos.map((p) => ({
-          ...p,
-          imagen: resolverImagen(p.imagen),
-        }));
-        setProductos(productosConImagen);
+        const datosApi = respuesta.datos;
+        guardarCache(quitarImagen(datosApi));
+        setProductos(mapearConImagen(datosApi));
+        setErrorProductos(null);
       } catch (error) {
-        setErrorProductos('No se pudieron cargar los productos. Verifica que el backend esté corriendo.');
+        if (!cache) {
+          setErrorProductos('No se pudieron cargar los productos. Intenta recargar la página.');
+        }
       } finally {
         setCargandoProductos(false);
       }
     };
-    cargarProductos();
+    cargarDesdeBackend();
   }, []);
 
   useEffect(() => {
@@ -166,40 +210,42 @@ function App() {
       />
 
       <main style={estilos.contenidoPrincipal}>
-        <Routes>
-          <Route
-            path="/"
-            element={
-              <PaginaInicio
-                productos={productos}
-                cargando={cargandoProductos}
-                error={errorProductos}
-                agregarAlCarrito={agregarAlCarrito}
-                busqueda={busqueda}
-                categoriaSeleccionada={categoriaSeleccionada}
-                paginaActual={paginaActual}
-                onPageChange={manejarCambioPagina}
-                onSearchResults={setHayResultadosBusqueda}
-              />
-            }
-          />
-          <Route
-            path="/carrito"
-            element={
-              <PaginaCarrito
-                carrito={carrito}
-                actualizarCantidad={actualizarCantidad}
-                eliminarDelCarrito={eliminarDelCarrito}
-                vaciarCarrito={vaciarCarrito}
-                usuario={usuario}
-              />
-            }
-          />
-          <Route path="/login" element={<PaginaLogin establecerUsuario={setUsuario} />} />
-          <Route path="/politica-privacidad" element={<PoliticaPrivacidad />} />
-          <Route path="/politica-devoluciones" element={<PoliticaDevoluciones />} />
-          <Route path="/terminos-servicio" element={<TerminosServicio />} />
-        </Routes>
+        <Suspense fallback={<div style={estilos.suspenseFallback}>Cargando...</div>}>
+          <Routes>
+            <Route
+              path="/"
+              element={
+                <PaginaInicio
+                  productos={productos}
+                  cargando={cargandoProductos}
+                  error={errorProductos}
+                  agregarAlCarrito={agregarAlCarrito}
+                  busqueda={busqueda}
+                  categoriaSeleccionada={categoriaSeleccionada}
+                  paginaActual={paginaActual}
+                  onPageChange={manejarCambioPagina}
+                  onSearchResults={setHayResultadosBusqueda}
+                />
+              }
+            />
+            <Route
+              path="/carrito"
+              element={
+                <PaginaCarrito
+                  carrito={carrito}
+                  actualizarCantidad={actualizarCantidad}
+                  eliminarDelCarrito={eliminarDelCarrito}
+                  vaciarCarrito={vaciarCarrito}
+                  usuario={usuario}
+                />
+              }
+            />
+            <Route path="/login" element={<PaginaLogin establecerUsuario={setUsuario} />} />
+            <Route path="/politica-privacidad" element={<PoliticaPrivacidad />} />
+            <Route path="/politica-devoluciones" element={<PoliticaDevoluciones />} />
+            <Route path="/terminos-servicio" element={<TerminosServicio />} />
+          </Routes>
+        </Suspense>
       </main>
 
       <Footer />
@@ -237,6 +283,11 @@ const estilos = {
     zIndex: 1000,
   },
   iconoMensaje: { width: '20px', height: '20px', flexShrink: 0 },
+  suspenseFallback: {
+    padding: '60px 20px',
+    textAlign: 'center',
+    color: '#6b7280',
+  },
 };
 
 export default App;

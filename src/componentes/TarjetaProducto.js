@@ -36,7 +36,7 @@ const TarjetaProducto = ({ producto, agregarAlCarrito, seleccionado, onSeleccion
         style={{ transform: visible ? 'translateY(0)' : 'translateY(28px)', opacity: visible ? 1 : 0 }}
         onClick={onSeleccionar}
       >
-      <img className="tarjeta-producto__imagen" src={producto.imagen} alt={producto.nombre} />
+      <img className="tarjeta-producto__imagen" src={producto.imagen} alt={producto.nombre} loading="lazy" decoding="async" />
 
       <div className="tarjeta-producto__contenido">
         <div className="tarjeta-producto__info">

@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import ProductGrid from '../componentes/ProductGrid';
 import Pagination from '../componentes/Pagination';
 import HeroBanner from '../componentes/HeroBanner';
+import { GridSkeleton } from '../componentes/TarjetaProductoSkeleton';
 
 const ITEMS_POR_PAGINA = 12;
 
@@ -62,9 +63,9 @@ const PaginaInicio = ({
             </div>
           </div>
 
-          {cargando ? (
-            <div style={estilos.mensaje}>Cargando productos...</div>
-          ) : error ? (
+          {cargando && productos.length === 0 ? (
+            <GridSkeleton cantidad={8} />
+          ) : error && productos.length === 0 ? (
             <div style={{ ...estilos.mensaje, color: '#e74c3c' }}>{error}</div>
           ) : productosPagina.length === 0 ? (
             <div style={estilos.mensaje}>
