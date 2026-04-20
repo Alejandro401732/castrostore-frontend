@@ -1,27 +1,31 @@
-// ============================================
-// PAGINA: Inicio
-// Muestra el catalogo de productos
-// ============================================
-
 import React, { useEffect, useMemo, useState } from 'react';
-import { productosMock } from '../mocks/productosMock';
 import ProductGrid from '../componentes/ProductGrid';
 import Pagination from '../componentes/Pagination';
 import HeroBanner from '../componentes/HeroBanner';
 
 const ITEMS_POR_PAGINA = 12;
 
-const PaginaInicio = ({ agregarAlCarrito, busqueda, categoriaSeleccionada, paginaActual, onPageChange, onSearchResults }) => {
+const PaginaInicio = ({
+  productos,
+  cargando,
+  error,
+  agregarAlCarrito,
+  busqueda,
+  categoriaSeleccionada,
+  paginaActual,
+  onPageChange,
+  onSearchResults,
+}) => {
   const [productoSeleccionado, setProductoSeleccionado] = useState(null);
 
   const productosFiltrados = useMemo(() => {
     const termino = busqueda.trim().toLowerCase();
-    return productosMock.filter((producto) => {
+    return productos.filter((producto) => {
       const coincideCategoria = categoriaSeleccionada === 'Todas' || producto.categoria === categoriaSeleccionada;
       const coincideBusqueda = producto.nombre.toLowerCase().includes(termino);
       return coincideCategoria && coincideBusqueda;
     });
-  }, [busqueda, categoriaSeleccionada]);
+  }, [productos, busqueda, categoriaSeleccionada]);
 
   const totalPaginas = Math.max(1, Math.ceil(productosFiltrados.length / ITEMS_POR_PAGINA));
   const paginaSegura = Math.min(paginaActual, totalPaginas);
@@ -58,7 +62,11 @@ const PaginaInicio = ({ agregarAlCarrito, busqueda, categoriaSeleccionada, pagin
             </div>
           </div>
 
-          {productosPagina.length === 0 ? (
+          {cargando ? (
+            <div style={estilos.mensaje}>Cargando productos...</div>
+          ) : error ? (
+            <div style={{ ...estilos.mensaje, color: '#e74c3c' }}>{error}</div>
+          ) : productosPagina.length === 0 ? (
             <div style={estilos.mensaje}>
               {busqueda.trim()
                 ? 'Producto no disponible. Intenta otra búsqueda.'

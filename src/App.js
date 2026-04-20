@@ -1,25 +1,20 @@
-// ============================================
-// APP.JS - Componente principal de la aplicacion
-// Maneja el enrutamiento, estado global del carrito y usuario
-// ============================================
-
 import React, { useState, useEffect } from 'react';
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 
-// Componentes
 import BarraNavegacion from './componentes/BarraNavegacion';
 import Sidebar from './componentes/Sidebar';
+import Footer from './componentes/Footer';
+import ChatBot from './componentes/ChatBot';
 
-// Paginas
 import PaginaInicio from './paginas/PaginaInicio';
-import PaginaDetalleProducto from './paginas/PaginaDetalleProducto';
 import PaginaCarrito from './paginas/PaginaCarrito';
 import PaginaLogin from './paginas/PaginaLogin';
 import PoliticaPrivacidad from './paginas/PoliticaPrivacidad';
 import PoliticaDevoluciones from './paginas/PoliticaDevoluciones';
 import TerminosServicio from './paginas/TerminosServicio';
-import Footer from './componentes/Footer';
-import ChatBot from './componentes/ChatBot';
+
+import { obtenerProductos } from './servicios/servicioProducto';
+import resolverImagen from './utils/imagenesProductos';
 
 function ReloadRedirect() {
   const navigate = useNavigate();
@@ -48,6 +43,9 @@ function App() {
   const [sidebarAbierto, setSidebarAbierto] = useState(false);
   const [hayResultadosBusqueda, setHayResultadosBusqueda] = useState(true);
   const [mostrarMensaje, setMostrarMensaje] = useState(false);
+  const [productos, setProductos] = useState([]);
+  const [cargandoProductos, setCargandoProductos] = useState(true);
+  const [errorProductos, setErrorProductos] = useState(null);
 
   useEffect(() => {
     const usuarioGuardado = localStorage.getItem('usuario');
@@ -62,21 +60,35 @@ function App() {
   }, []);
 
   useEffect(() => {
+    const cargarProductos = async () => {
+      try {
+        const respuesta = await obtenerProductos();
+        const productosConImagen = respuesta.datos.map((p) => ({
+          ...p,
+          imagen: resolverImagen(p.imagen),
+        }));
+        setProductos(productosConImagen);
+      } catch (error) {
+        setErrorProductos('No se pudieron cargar los productos. Verifica que el backend esté corriendo.');
+      } finally {
+        setCargandoProductos(false);
+      }
+    };
+    cargarProductos();
+  }, []);
+
+  useEffect(() => {
     localStorage.setItem('carrito', JSON.stringify(carrito));
   }, [carrito]);
 
   const agregarAlCarrito = (producto) => {
     setCarrito((carritoActual) => {
       const itemExistente = carritoActual.find((item) => item.id === producto.id);
-
       if (itemExistente) {
         return carritoActual.map((item) =>
-          item.id === producto.id
-            ? { ...item, cantidad: item.cantidad + 1 }
-            : item
+          item.id === producto.id ? { ...item, cantidad: item.cantidad + 1 } : item
         );
       }
-
       return [...carritoActual, { ...producto, cantidad: 1 }];
     });
     setMostrarMensaje(true);
@@ -88,7 +100,6 @@ function App() {
       eliminarDelCarrito(productoId);
       return;
     }
-
     setCarrito((carritoActual) =>
       carritoActual.map((item) =>
         item.id === productoId ? { ...item, cantidad: nuevaCantidad } : item
@@ -97,29 +108,20 @@ function App() {
   };
 
   const eliminarDelCarrito = (productoId) => {
-    setCarrito((carritoActual) =>
-      carritoActual.filter((item) => item.id !== productoId)
-    );
+    setCarrito((carritoActual) => carritoActual.filter((item) => item.id !== productoId));
   };
 
-  const vaciarCarrito = () => {
-    setCarrito([]);
-  };
+  const vaciarCarrito = () => setCarrito([]);
 
-  const cerrarSesion = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('usuario');
-    setUsuario(null);
+  const scrollToProductos = () => {
+    const seccion = document.getElementById('productos');
+    if (seccion) seccion.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
   const manejarBuscar = (texto) => {
     setBusqueda(texto);
     setPaginaActual(1);
-
-    const seccionProductos = document.getElementById('productos');
-    if (seccionProductos) {
-      seccionProductos.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
+    scrollToProductos();
   };
 
   const manejarSeleccionCategoria = (categoria) => {
@@ -127,17 +129,12 @@ function App() {
     setPaginaActual(1);
   };
 
-  const scrollToProductos = () => {
-    const seccionProductos = document.getElementById('productos');
-    if (seccionProductos) {
-      seccionProductos.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
+  const manejarCambioPagina = (pagina) => {
+    setPaginaActual(pagina);
+    scrollToProductos();
   };
 
-  const cantidadTotalCarrito = carrito.reduce(
-    (total, item) => total + item.cantidad,
-    0
-  );
+  const cantidadTotalCarrito = carrito.reduce((total, item) => total + item.cantidad, 0);
 
   return (
     <div style={estilos.aplicacion}>
@@ -174,24 +171,17 @@ function App() {
             path="/"
             element={
               <PaginaInicio
+                productos={productos}
+                cargando={cargandoProductos}
+                error={errorProductos}
                 agregarAlCarrito={agregarAlCarrito}
                 busqueda={busqueda}
                 categoriaSeleccionada={categoriaSeleccionada}
                 paginaActual={paginaActual}
-                onPageChange={(pagina) => {
-                  setPaginaActual(pagina);
-                  const seccion = document.getElementById('productos');
-                  if (seccion) {
-                    seccion.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                  }
-                }}
+                onPageChange={manejarCambioPagina}
                 onSearchResults={setHayResultadosBusqueda}
               />
             }
-          />
-          <Route
-            path="/producto/:id"
-            element={<PaginaDetalleProducto agregarAlCarrito={agregarAlCarrito} />}
           />
           <Route
             path="/carrito"
@@ -205,10 +195,7 @@ function App() {
               />
             }
           />
-          <Route
-            path="/login"
-            element={<PaginaLogin establecerUsuario={setUsuario} />}
-          />
+          <Route path="/login" element={<PaginaLogin establecerUsuario={setUsuario} />} />
           <Route path="/politica-privacidad" element={<PoliticaPrivacidad />} />
           <Route path="/politica-devoluciones" element={<PoliticaDevoluciones />} />
           <Route path="/terminos-servicio" element={<TerminosServicio />} />
@@ -216,7 +203,7 @@ function App() {
       </main>
 
       <Footer />
-      <ChatBot />
+      <ChatBot productos={productos} />
     </div>
   );
 }
@@ -230,9 +217,7 @@ const estilos = {
     color: '#111827',
     fontFamily: 'Poppins, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
   },
-  contenidoPrincipal: {
-    flex: 1,
-  },
+  contenidoPrincipal: { flex: 1 },
   mensajeAgregado: {
     position: 'fixed',
     top: '20px',
@@ -250,14 +235,8 @@ const estilos = {
     fontWeight: 600,
     boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)',
     zIndex: 1000,
-    opacity: 1,
-    transition: 'opacity 0.3s ease-out, transform 0.3s ease-out',
   },
-  iconoMensaje: {
-    width: '20px',
-    height: '20px',
-    flexShrink: 0,
-  },
+  iconoMensaje: { width: '20px', height: '20px', flexShrink: 0 },
 };
 
 export default App;

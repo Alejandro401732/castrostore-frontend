@@ -1,78 +1,70 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { productosMock, categorias } from '../mocks/productosMock';
 import formatearPrecio from '../utils/formatearPrecio';
 import './ChatBot.css';
 
 const SUGERENCIAS = ['Audífonos', 'Deportes', 'Envío', 'Precio bajo', 'Ofertas'];
 
-function buscarRespuesta(texto) {
-  const msg = texto.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+function normalizar(texto) {
+  return texto.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
+
+function buscarRespuesta(texto, productos) {
+  const msg = normalizar(texto);
   const delay = 400 + Math.random() * 600;
 
-  // Saludos
   if (/^(hola|hey|buenas|que tal|parcero|parce|quiubo|buenos dias|buenas tardes|buenas noches)/.test(msg)) {
     return { delay, respuesta: '¡Hola, parcero! Bienvenido a CastroStore. ¿En qué te puedo ayudar hoy? Podés preguntarme por productos, categorías, precios o envíos.', productos: [] };
   }
 
-  // Despedidas
   if (/^(gracias|chao|adios|nos vemos|listo|vale)/.test(msg)) {
-    return { delay, respuesta: '¡Con mucho gusto, parce! Si necesitás algo más, aquí estoy. ¡Que te vaya bien!' , productos: [] };
+    return { delay, respuesta: '¡Con mucho gusto, parce! Si necesitás algo más, aquí estoy. ¡Que te vaya bien!', productos: [] };
   }
 
-  // Envío
   if (/envio|envío|despacho|domicilio|entrega/.test(msg)) {
     return { delay, respuesta: 'Hacemos envíos a todo Colombia. En Medellín el envío es gratis en compras mayores a $150.000 COP y llega en 1-2 días hábiles. Para el resto del país, de 3 a 5 días hábiles.', productos: [] };
   }
 
-  // Devoluciones
   if (/devolucion|devolver|cambio|garantia/.test(msg)) {
     return { delay, respuesta: 'Tenés 30 días para devoluciones o cambios desde la fecha de entrega. El producto debe estar sin usar y en su empaque original. La garantía cubre defectos de fábrica por 1 año.', productos: [] };
   }
 
-  // Pagos
   if (/pago|pagar|tarjeta|nequi|daviplata|efectivo|metodo/.test(msg)) {
     return { delay, respuesta: 'Aceptamos tarjetas de crédito/débito, PSE, Nequi, Daviplata y pago contra entrega en Medellín. Todas las transacciones son seguras.', productos: [] };
   }
 
-  // Horario / contacto
   if (/horario|atencion|contacto|telefono|whatsapp/.test(msg)) {
     return { delay, respuesta: 'Nuestro horario de atención es de lunes a sábado, 8:00am a 6:00pm. También podés escribirnos por WhatsApp o redes sociales.', productos: [] };
   }
 
-  // Precio bajo / barato / económico
   if (/barato|economico|precio bajo|mas barato|oferta|promocion/.test(msg)) {
-    const baratos = [...productosMock].sort((a, b) => a.precio - b.precio).slice(0, 4);
+    const baratos = [...productos].sort((a, b) => a.precio - b.precio).slice(0, 4);
     return { delay, respuesta: '¡Mirá estos productos con los mejores precios, parcero!', productos: baratos };
   }
 
-  // Precio alto / caro / premium
   if (/caro|premium|mejor|lujo|precio alto|mas caro|top/.test(msg)) {
-    const caros = [...productosMock].sort((a, b) => b.precio - a.precio).slice(0, 4);
+    const caros = [...productos].sort((a, b) => b.precio - a.precio).slice(0, 4);
     return { delay, respuesta: 'Estos son nuestros productos premium, lo mejor de lo mejor:', productos: caros };
   }
 
-  // Nuevo / reciente
   if (/nuevo|reciente|novedad|llegada/.test(msg)) {
-    const nuevos = productosMock.slice(-4);
+    const nuevos = productos.slice(-4);
     return { delay, respuesta: '¡Mirá las últimas novedades que tenemos, parce!', productos: nuevos };
   }
 
-  // Buscar por categoría
-  const categoriaEncontrada = categorias.find(cat => {
-    if (cat === 'Todas') return false;
-    const catNorm = cat.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  const categoriasDisponibles = [...new Set(productos.map(p => p.categoria).filter(Boolean))];
+  const categoriaEncontrada = categoriasDisponibles.find(cat => {
+    const catNorm = normalizar(cat);
     return msg.includes(catNorm) || catNorm.includes(msg.replace(/\s/g, ''));
   });
 
   if (categoriaEncontrada) {
-    const productosCat = productosMock.filter(p => p.categoria === categoriaEncontrada).slice(0, 4);
+    const productosCat = productos.filter(p => p.categoria === categoriaEncontrada).slice(0, 4);
     return { delay, respuesta: `¡Tenemos estos productos de ${categoriaEncontrada}!`, productos: productosCat };
   }
 
-  // Buscar por nombre de producto
-  const productosEncontrados = productosMock.filter(p => {
-    const nombre = p.nombre.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-    const desc = p.descripcion.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  const productosEncontrados = productos.filter(p => {
+    const nombre = normalizar(p.nombre);
+    const desc = normalizar(p.descripcion || '');
     return nombre.includes(msg) || msg.split(' ').some(word => word.length > 2 && (nombre.includes(word) || desc.includes(word)));
   });
 
@@ -81,16 +73,14 @@ function buscarRespuesta(texto) {
     return { delay, respuesta: `¡Encontré ${productosEncontrados.length} producto${productosEncontrados.length > 1 ? 's' : ''} relacionados!`, productos: mostrar };
   }
 
-  // Stock
   if (/stock|disponible|hay|queda/.test(msg)) {
     return { delay, respuesta: 'Todos nuestros productos muestran su disponibilidad. Escribime el nombre de lo que buscás y te digo si está disponible.', productos: [] };
   }
 
-  // Respuesta por defecto
   return { delay, respuesta: 'No entendí muy bien, parce. Podés preguntarme por:\n- Nombre de un producto (ej: "audífonos")\n- Una categoría (ej: "deportes")\n- Precios bajos o premium\n- Envíos, devoluciones o pagos', productos: [] };
 }
 
-function ChatBot() {
+function ChatBot({ productos = [] }) {
   const [abierto, setAbierto] = useState(false);
   const [cerrando, setCerrando] = useState(false);
   const [mensajes, setMensajes] = useState([
@@ -133,11 +123,11 @@ function ChatBot() {
     setInput('');
     setEscribiendo(true);
 
-    const { delay, respuesta, productos } = buscarRespuesta(msg);
+    const { delay, respuesta, productos: productosRespuesta } = buscarRespuesta(msg, productos);
 
     setTimeout(() => {
       setEscribiendo(false);
-      setMensajes(prev => [...prev, { tipo: 'bot', texto: respuesta, productos }]);
+      setMensajes(prev => [...prev, { tipo: 'bot', texto: respuesta, productos: productosRespuesta }]);
     }, delay);
   };
 
@@ -146,7 +136,6 @@ function ChatBot() {
     enviarMensaje();
   };
 
-  // Ícono de muñeco con auriculares
   const iconoSoporte = (
     <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
       <path d="M12 2C6.48 2 2 6.48 2 12v5a3 3 0 003 3h1a2 2 0 002-2v-3a2 2 0 00-2-2H5v-1a7 7 0 0114 0v1h-1a2 2 0 00-2 2v3a2 2 0 002 2h1a3 3 0 003-3v-5c0-5.52-4.48-10-10-10z" fill="currentColor"/>
@@ -157,7 +146,6 @@ function ChatBot() {
 
   return (
     <>
-      {/* Botón flotante */}
       <button className="chatbot__boton" onClick={toggleChat} aria-label="Abrir chat de soporte" type="button">
         {abierto ? (
           <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -166,10 +154,8 @@ function ChatBot() {
         ) : iconoSoporte}
       </button>
 
-      {/* Ventana del chat */}
       {abierto && (
         <div className={`chatbot__ventana ${cerrando ? 'chatbot__ventana--cerrado' : ''}`}>
-          {/* Header */}
           <div className="chatbot__header">
             <div className="chatbot__header-icono">{iconoSoporte}</div>
             <div className="chatbot__header-info">
@@ -181,7 +167,6 @@ function ChatBot() {
             </button>
           </div>
 
-          {/* Mensajes */}
           <div className="chatbot__mensajes" ref={refMensajes}>
             {mensajes.map((msg, i) => (
               <div key={i} className={`chatbot__mensaje chatbot__mensaje--${msg.tipo}`}>
@@ -219,7 +204,6 @@ function ChatBot() {
             )}
           </div>
 
-          {/* Input */}
           <form className="chatbot__input-area" onSubmit={manejarEnvio}>
             <input
               ref={refInput}
