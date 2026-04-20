@@ -5,10 +5,13 @@
   padding: 18px 28px;
   background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
   color: white;
-  position: relative;
-  z-index: 10;
+  position: sticky;
+  top: 0;
+  z-index: 100;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   gap: 16px;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 .barra-navegacion__brand-search {
