@@ -8,12 +8,15 @@
   position: relative;
   z-index: 10;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  gap: 16px;
 }
 
 .barra-navegacion__brand-search {
   display: flex;
   align-items: center;
   gap: 20px;
+  flex: 1;
+  min-width: 0;
 }
 
 .barra-navegacion__logo {
@@ -28,7 +31,9 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-left: 10%;
+  flex: 1;
+  min-width: 0;
+  margin-left: 20px;
 }
 
 .barra-navegacion__label {
@@ -45,7 +50,8 @@
   background: rgba(255, 255, 255, 0.95);
   border-radius: 999px;
   padding: 10px 16px;
-  min-width: 260px;
+  flex: 1;
+  min-width: 0;
   max-width: 380px;
   box-shadow: 0 8px 28px rgba(15, 23, 42, 0.14);
 }
@@ -60,6 +66,7 @@
   width: 28px;
   height: 28px;
   border-radius: 999px;
+  flex-shrink: 0;
   transition: color 0.2s ease, transform 0.2s ease, background 0.2s ease;
 }
 
@@ -86,6 +93,7 @@
 .barra-navegacion__search input {
   flex: 1;
   min-width: 0;
+  width: 100%;
   border: none;
   outline: none;
   background: transparent;
@@ -101,7 +109,8 @@
 .barra-navegacion__right {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 12px;
+  flex-shrink: 0;
 }
 
 .barra-navegacion__icono-boton {
@@ -115,6 +124,7 @@
   background: rgba(255, 255, 255, 0.1);
   color: white;
   text-decoration: none;
+  flex-shrink: 0;
   transition: background 0.2s ease, transform 0.2s ease;
 }
 
@@ -154,6 +164,7 @@
   color: white;
   text-decoration: none;
   font-weight: 600;
+  white-space: nowrap;
   transition: background 0.2s ease, transform 0.2s ease;
 }
 
@@ -174,7 +185,6 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-right: 10px;
   width: 44px;
   height: 44px;
   background: rgba(255, 255, 255, 0.1);
@@ -182,6 +192,7 @@
   border-radius: 10px;
   color: white;
   cursor: pointer;
+  flex-shrink: 0;
   transition: background 0.2s ease, transform 0.2s ease;
 }
 
@@ -195,61 +206,94 @@
   height: 24px;
 }
 
+/* Tablet */
 @media (max-width: 900px) {
   .barra-navegacion {
-    flex-wrap: wrap;
-    justify-content: space-between;
-    padding: 15px 20px;
+    padding: 14px 18px;
+    gap: 10px;
   }
 
-  .barra-navegacion__btn-menu {
-    display: flex;
+  .barra-navegacion__search-group {
+    margin-left: 0;
   }
 
-  .barra-navegacion__toggle {
-    display: block;
-  }
-
-  .barra-navegacion__menu {
-    width: 100%;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 12px;
-    padding: 14px 0;
+  .barra-navegacion__label {
     display: none;
-    background-color: rgba(44, 62, 80, 0.97);
-    border-radius: 12px;
-  }
-
-  .barra-navegacion__menu--abierto {
-    display: flex;
-  }
-
-  .barra-navegacion__dropdown-contenido {
-    position: static;
-    width: 100%;
-    border-radius: 10px;
-    box-shadow: none;
-    margin-top: 4px;
-  }
-
-  .barra-navegacion__dropdown-enlace {
-    padding-left: 24px;
-  }
-}
-
-@media (max-width: 600px) {
-  .barra-navegacion {
-    padding: 12px 16px;
   }
 
   .barra-navegacion__logo {
     font-size: 20px;
   }
+}
 
-  .barra-navegacion__enlace,
-  .barra-navegacion__dropdown-boton,
-  .barra-navegacion__boton-salir {
-    font-size: 15px;
+/* Mobile */
+@media (max-width: 600px) {
+  .barra-navegacion {
+    padding: 12px 14px;
+    gap: 8px;
+  }
+
+  .barra-navegacion__brand-search {
+    gap: 8px;
+  }
+
+  .barra-navegacion__logo {
+    font-size: 18px;
+  }
+
+  .barra-navegacion__search {
+    padding: 8px 12px;
+    min-width: 0;
+  }
+
+  .barra-navegacion__search input {
+    font-size: 14px;
+  }
+
+  .barra-navegacion__right {
+    gap: 8px;
+  }
+
+  .barra-navegacion__icono-boton,
+  .barra-navegacion__btn-menu {
+    width: 40px;
+    height: 40px;
+  }
+
+  .barra-navegacion__link {
+    padding: 0 14px;
+    height: 40px;
+    font-size: 14px;
+  }
+}
+
+/* Extra small mobile */
+@media (max-width: 420px) {
+  .barra-navegacion {
+    flex-wrap: wrap;
+  }
+
+  .barra-navegacion__brand-search {
+    flex: 1 1 auto;
+    order: 1;
+    min-width: 0;
+  }
+
+  .barra-navegacion__right {
+    order: 2;
+  }
+
+  .barra-navegacion__search-group {
+    flex-basis: 100%;
+    order: 3;
+    margin: 6px 0 0 0;
+  }
+
+  .barra-navegacion__search {
+    max-width: 100%;
+  }
+
+  .barra-navegacion__logo {
+    font-size: 17px;
   }
 }
